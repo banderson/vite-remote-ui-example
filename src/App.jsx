@@ -1,38 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import './App.css'
-
-const worker = new Worker(new URL('./worker', import.meta.url), {
-  type: "module"
-})
+import {
+  createController,
+  createRemoteReceiver,
+  RemoteRenderer,
+} from "@remote-ui/react/host";
+import { createEndpoint } from "@remote-ui/rpc";
+import { useEffect, useMemo, useState } from "react";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [show, setShow] = useState(true);
 
   return (
     <div className="App">
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <button
+        onClick={() => {
+          setShow((show) => !show);
+        }}
+      >
+        Toggle
+      </button>
+
+      <br />
+      <br />
+
+      {show && <RemoteCounterWidget />}
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
+
+function Button({ onClick, children }) {
+  return (
+    <button type="button" onClick={() => onClick?.()}>
+      {children}
+    </button>
+  );
+}
+
+function RemoteCounterWidget() {
+  const receiver = useMemo(() => createRemoteReceiver(), []);
+  const controller = useMemo(
+    () =>
+      createController({
+        Button,
+      }),
+    []
+  );
+
+  useEffect(() => {
+    const worker = new Worker(new URL("./worker", import.meta.url), {
+      type: "module",
+    });
+
+    const endpoint = createEndpoint(worker);
+
+    endpoint.call.renderCounterWidget(receiver.receive);
+
+    return () => {
+      endpoint.terminate();
+    };
+  }, [receiver]);
+
+  return (
+    <>
+      The buttons below are rendered from a web worker.
+      <br />
+      <br />
+      <RemoteRenderer receiver={receiver} controller={controller} />
+    </>
+  );
+}

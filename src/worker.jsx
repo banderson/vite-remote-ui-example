@@ -1,19 +1,47 @@
-// For convenience, this library re-exports several values from @remote-ui/core, like createRemoteRoot
-import {render, createRemoteRoot} from '@remote-ui/react';
+import {
+  createRemoteReactComponent,
+  createRemoteRoot,
+  render,
+} from "@remote-ui/react";
+import { createEndpoint, retain } from "@remote-ui/rpc";
+import React, { useState } from "react";
 
-// a remote component — see implementation below for getting strong
-// typing on the available props.
-const Button = 'Button';
+const Button = createRemoteReactComponent("Button");
 
-// Assuming we get a function that will communicate with the host...
-const channel = () => {};
+function CounterWidget() {
+  const [count, setCount] = useState(0);
 
-const remoteRoot = createRemoteRoot(channel, {
-  components: [Button],
-});
-
-function App() {
-  return <Button onClick={() => console.log('clicked!')}>Click me!</Button>;
+  return (
+    <>
+      {count > 0 && (
+        <Button onClick={() => setCount((count) => count - 1)}>-</Button>
+      )}
+      <Button>{count}</Button>
+      {count < 10 && (
+        <Button onClick={() => setCount((count) => count + 1)}>+</Button>
+      )}
+    </>
+  );
 }
 
-render(<App />, remoteRoot);
+function App() {
+  return <CounterWidget />;
+}
+
+let remoteRoot;
+
+const renderCounterWidget = (receiver) => {
+  retain(receiver);
+
+  if (!remoteRoot) {
+    remoteRoot = createRemoteRoot(receiver, {
+      components: [Button],
+    });
+  }
+
+  render(<App receiver={receiver} />, remoteRoot, () => remoteRoot.mount());
+};
+
+const endpoint = createEndpoint(self);
+
+endpoint.expose({ renderCounterWidget });
