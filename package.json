@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "stackblitz": {
+    "startCommand": "npm run dev"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
